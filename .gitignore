@@ -1,0 +1,7 @@
+.vscode/*
+lib/*
+node_modules/*
+__pycache__/
+yarn.lock
+*.egg-info/
+.ipynb_checkpoints/
