@@ -1,4 +1,5 @@
 import altair as alt
+import boto3
 import json
 import numpy as np
 import os
@@ -8,60 +9,50 @@ import tornado
 import tornado.ioloop
 import tornado.web
 
-from io import StringIO
-from tornado.web import RequestHandler
-
-class ProfilerTemplateHandler(RequestHandler):
-  # describe
-  #@tornado.web.authenticated
-  def get(self, name):
-    # TODO: obtain actual data from S3
-    res = []
-    for nm in [ 'cpu_0', 'cpu_1', 'gpu_0', 'gpu_1', 'network', 'disk']:
-      res.extend(signalseq( 5, 4, nm ))
-    df = pd.DataFrame(res)
-    chart = alt.Chart(df).mark_line().encode( x='date:T', y='value:Q', color='type:N' ).properties(
-      width=1200,
-      height=300
-    )
-    sio = StringIO()
-    chart.save(sio, format='html')
-    #self.set_header('Content-Type', 'text/html')
-    self.write(sio.getvalue())
-    #self.finish(json.dumps(res))
+from io import BytesIO
+from tornado.web import RequestHandler, HTTPError
 
 
 class ProfilerDataHandler(RequestHandler):
   def prepare(self):
     self.set_header('Content-Type', 'application/json')
-  
+    self.s3res = boto3.resource('s3')
+
   #describe
   #@tornado.web.authenticated
-  def get(self, name=None):
-    # TODO: obtain actual data from S3
-    res = []
-    for nm in [ 'cpu_0', 'cpu_1', 'gpu_0', 'gpu_1', 'network', 'disk']:
-      res.extend(signalseq( 500, 20, nm ))
-    self.finish(json.dumps(res))
+  def get(self):
+    bucket_name = self.get_argument('bucket', None)
+    if bucket_name is None:
+       raise HTTPError(reason='No bucket specified', status_code=400)
 
-def signalseq( sz, smoothfactor, nm):
-    ts = np.arange(sz) #.astype(float)
-    #ts += np.random.uniform(low=0, high=1, size=(sz))
-    rms = np.convolve(np.random.randn(sz), np.ones((smoothfactor,))/smoothfactor)[(smoothfactor-1):]
-    rms += -min(rms)
-    rms /= max(rms)
-    #plt.plot( ts, rms )
-    res = []
-    for t, rm in zip(ts,rms):
-      res.append({ 'date': int(t), 'value' : float(rm), 'type': str(nm)})
-    return res
+    object_name = self.get_argument('object', None)
+    if object_name is None:
+       raise HTTPError(reason='No prefix specified', status_code=400)
 
+    bucket = self.s3res.Bucket(bucket_name)
+    if bucket is None:
+       raise HTTPError(reason=f'Bucket {bucket_name} does not exist', status_code=404)
+
+    obj = bucket.Object(object_name)
+    if obj is None:
+       raise HTTPError(reason=f'Object {object_name} does not exist in bucket {bucket_name}', status_code=404)
+
+    json_data = BytesIO()
+    obj.download_fileobj(json_data)
+
+    self.write(json_data.getvalue())
 
 
 def make_app():
-    return tornado.web.Application([
-        (r"/", ProfilerDataHandler),
-    ], debug=True)
+  settings = {
+    "static_path": os.getcwd(),
+    "static_url_prefix": "/resources/",
+  }
+  return tornado.web.Application( [
+    (r'/profiler/data', ProfilerDataHandler),
+  ], 
+  debug=True,
+  **settings )
 
 if __name__ == "__main__":
     app = make_app()
