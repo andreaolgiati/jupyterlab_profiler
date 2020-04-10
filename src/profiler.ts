@@ -31,7 +31,7 @@ import {
  */
 const PROFILER_SERVICE_URL = '/jupytersmprofiler/api/profiler';
 
-const PROFILER_URL = '/jupytersmprofiler/profiler';
+const PROFILER_TEMPLATE_URL = '/jupytersmprofiler/profiler/template';
 
 /**
  * The namespace for Profiler statics.
@@ -420,11 +420,11 @@ namespace Private {
 
     export
     function getProfilerInstanceRootUrl(baseUrl: string): string {
-        return URLExt.join(baseUrl, PROFILER_URL);
+        return URLExt.join(baseUrl, PROFILER_TEMPLATE_URL);
     }
 
     export
     function getProfilerInstanceUrl(baseUrl: string, name: string): string {
-        return URLExt.join(baseUrl, PROFILER_URL, name);
+        return URLExt.join(baseUrl, PROFILER_TEMPLATE_URL, name);
     }
 }

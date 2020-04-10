@@ -5,10 +5,11 @@ import os
 import pandas as pd
 import random
 import tornado
+import tornado.ioloop
+import tornado.web
 
 from io import StringIO
-#from notebook.base.handlers import APIHandler
-from tornado.web import StaticFileHandler, HTTPError, RequestHandler
+from tornado.web import RequestHandler
 
 class ProfilerTemplateHandler(RequestHandler):
   # describe
@@ -17,7 +18,7 @@ class ProfilerTemplateHandler(RequestHandler):
     # TODO: obtain actual data from S3
     res = []
     for nm in [ 'cpu_0', 'cpu_1', 'gpu_0', 'gpu_1', 'network', 'disk']:
-      res.extend(signalseq( 500, 20, nm ))
+      res.extend(signalseq( 5, 4, nm ))
     df = pd.DataFrame(res)
     chart = alt.Chart(df).mark_line().encode( x='date:T', y='value:Q', color='type:N' ).properties(
       width=1200,
@@ -30,6 +31,18 @@ class ProfilerTemplateHandler(RequestHandler):
     #self.finish(json.dumps(res))
 
 
+class ProfilerDataHandler(RequestHandler):
+  def prepare(self):
+    self.set_header('Content-Type', 'application/json')
+  
+  #describe
+  #@tornado.web.authenticated
+  def get(self, name=None):
+    # TODO: obtain actual data from S3
+    res = []
+    for nm in [ 'cpu_0', 'cpu_1', 'gpu_0', 'gpu_1', 'network', 'disk']:
+      res.extend(signalseq( 500, 20, nm ))
+    self.finish(json.dumps(res))
 
 def signalseq( sz, smoothfactor, nm):
     ts = np.arange(sz) #.astype(float)
@@ -40,5 +53,17 @@ def signalseq( sz, smoothfactor, nm):
     #plt.plot( ts, rms )
     res = []
     for t, rm in zip(ts,rms):
-      res.append({ 'date': t, 'value' : rm, 'type': nm})
+      res.append({ 'date': int(t), 'value' : float(rm), 'type': str(nm)})
     return res
+
+
+
+def make_app():
+    return tornado.web.Application([
+        (r"/", ProfilerDataHandler),
+    ], debug=True)
+
+if __name__ == "__main__":
+    app = make_app()
+    app.listen(8887)
+    tornado.ioloop.IOLoop.current().start()

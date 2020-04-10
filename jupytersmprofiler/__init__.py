@@ -2,7 +2,7 @@ from notebook.utils import url_path_join
 
 from .handlers import ProfilerRootHandler, ProfilerInstanceHandler
 from .profiler_handlers import ProfilerApplicationManager
-from .template_handlers import ProfilerTemplateHandler
+from .template_handlers import ProfilerTemplateHandler, ProfilerDataHandler
 from ._version import __version__
 
 
@@ -37,21 +37,8 @@ def setup_handlers(web_app, url_path):
 
     # DP operations
     ## Vega template and data
-    handlers += [(url_path_join(root_pattern, r'/profiler/(\w+)'), ProfilerTemplateHandler)]
-    #handlers += [(url_path_join(root_pattern, r'/profiler/data/(\w+)'), ProfilerInstanceHandler)]
+    handlers += [(url_path_join(root_pattern, r'/profiler/template/(\w+)'), ProfilerTemplateHandler)]
+    handlers += [(url_path_join(root_pattern, r'/profiler/data/(\w+)'), ProfilerDataHandler)]
     web_app.add_handlers(host_pattern, handlers)
 
-
     web_app.settings['profiler_manager'] = ProfilerApplicationManager()
-
-    # Prepend the base_url so that it works in a jupyterhub setting
-    #doc_url = url_path_join(base_url, url_path, 'static')
-    #doc_dir = os.getenv('JLAB_SERVER_EXAMPLE_STATIC_DIR', os.path.join(os.path.dirname(__file__), '..', 'static'))
-    #handlers = [(f'{doc_url}/(.*)',
-    #    StaticFileHandler,
-    #    {'path': doc_dir})
-    #]
-    #web_app.add_handlers('.*$', handlers)
-
-    print( "OLG2: Set-up complete", handlers )
-
