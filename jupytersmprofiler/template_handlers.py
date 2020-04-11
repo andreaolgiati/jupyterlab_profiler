@@ -18,7 +18,6 @@ class ProfilerDataHandler(RequestHandler):
     self.set_header('Content-Type', 'application/json')
     self.s3res = boto3.resource('s3')
 
-  #describe
   #@tornado.web.authenticated
   def get(self):
     bucket_name = self.get_argument('bucket', None)
@@ -39,6 +38,21 @@ class ProfilerDataHandler(RequestHandler):
 
     json_data = BytesIO()
     obj.download_fileobj(json_data)
+
+    # JSON should look like so:
+    # [
+    #   {"date": 0, "value": 0.179, "type": "cpu_0"}, 
+    #   {"date": 1, "value": 0.157, "type": "cpu_0"}, 
+    #   ...
+    #   {"date": 200, "value": 0.221, "type": "cpu_0"}, 
+    #   ...
+    #   {"date": 1, "value": 0.204, "type": "gpu_4"}, 
+    #   ...
+    #   {"date": 1, "value": 0.20, "type": "network"}, 
+    #   {"date": 23, "value": 0.1, "type": "network"}, 
+    # ]
+    # - "type" is a free variable, Vega will distinguish. You can add new types
+    # - the list does not need to be ordered: you can randomly shuffle this list and the viz will be identical
 
     self.write(json_data.getvalue())
 
