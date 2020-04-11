@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    .error {
+      color: red;
+    }
+  </style>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm//vega@5"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm//vega-lite@4.8.1"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm//vega-embed@6"></script>
+</head>
+
+<body>
+  <div>Profiler Data3</div>
+  <div id="chart"></div>
+  <script>
+var vlSpec = {
+  $schema: 'https://vega.github.io/schema/vega-lite/v4.json',
+  data: {name: 'table'},
+  width: 400,
+  mark: 'line',
+  encoding: {
+    x: {field: 'x', type: 'quantitative', scale: {zero: false}},
+    y: {field: 'y', type: 'quantitative'},
+    color: {field: 'category', type: 'nominal'}
+  }
+};
+vegaEmbed('#chart', vlSpec).then(function (res) {
+  /**
+   * Generates a new tuple with random walk.
+   */
+  function newGenerator() {
+    var counter = -1;
+    var previousY = [5, 5, 5, 5];
+    return function () {
+      counter++;
+      var newVals = previousY.map(function (v, c) {
+        return {
+          x: counter,
+          y: v + Math.round(Math.random() * 10 - c * 3),
+          category: c
+        };
+      });
+      previousY = newVals.map(function (v) {
+        return v.y;
+      });
+      return newVals;
+    };
+  }
+
+  var valueGenerator = newGenerator();
+  var minimumX = -100;
+  window.setInterval(function () {
+    minimumX++;
+    var changeSet = vega
+      .changeset()
+      .insert(valueGenerator())
+      .remove(function (t) {
+        return t.x < minimumX;
+      });
+    res.view.change('table', changeSet).run();
+  }, 1000);
+});
+  </script>
+</body>
+</html>
