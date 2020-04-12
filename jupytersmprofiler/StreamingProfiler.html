@@ -13,53 +13,55 @@
 </head>
 
 <body>
-  <div>Profiler Data3</div>
+  <div id="form">
+    <form id="bucketSelector">
+      Bucket: <input type="text" name="bucket" value="<nobucket>"><br>
+      Object: <input type="text" name="object" value="<noprefix>"><br>
+      Trailing Length (sec): <input type="text" name="length" value="100"><br>
+    </form> 
+    <script>
+      function getBucket() {
+        var _bucket = document.getElementById("bucketSelector").elements[0].value;
+        var _object = document.getElementById("bucketSelector").elements[1].value;
+        console.log( "Bucket=", _bucket, "Prefix", _object )
+      }
+    </script>
+    <button onclick="getBucket()">Access Profiling Data</button>
+  </div>
+
   <div id="chart"></div>
+  
   <script>
 var vlSpec = {
   $schema: 'https://vega.github.io/schema/vega-lite/v4.json',
-  data: {name: 'table'},
-  width: 400,
+  data : {name: 'table'},
+  width : 1200,
+  height : 800,
   mark: 'line',
   encoding: {
-    x: {field: 'x', type: 'quantitative', scale: {zero: false}},
-    y: {field: 'y', type: 'quantitative'},
-    color: {field: 'category', type: 'nominal'}
+    x: {field: 'date', type: 'quantitative', scale: {zero: false}},
+    y: {field: 'value', type: 'quantitative'},
+    color: {field: 'type', type: 'nominal'}
   }
 };
 vegaEmbed('#chart', vlSpec).then(function (res) {
-  /**
-   * Generates a new tuple with random walk.
-   */
-  function newGenerator() {
-    var counter = -1;
-    var previousY = [5, 5, 5, 5];
-    return function () {
-      counter++;
-      var newVals = previousY.map(function (v, c) {
-        return {
-          x: counter,
-          y: v + Math.round(Math.random() * 10 - c * 3),
-          category: c
-        };
-      });
-      previousY = newVals.map(function (v) {
-        return v.y;
-      });
-      return newVals;
-    };
-  }
-
-  var valueGenerator = newGenerator();
-  var minimumX = -100;
+  var _bucket = document.getElementById("bucketSelector").elements[0].value;
+  var _object = document.getElementById("bucketSelector").elements[1].value;
+  var _length = document.getElementById("bucketSelector").elements[2].value;
+  var _minDate = -_length;
+  var _maxDate = 0;
   window.setInterval(function () {
-    minimumX++;
+    //fetch(`/dummy?x=${curX}`).then(response => response.json()).then( function(t) { vg = t })
+    fetch(`/profiler/data?bucket=${_bucket}&object=${_object}&min_date=${_minDate}&max_date=${_maxDate}`)
+    .then(response => response.json()).then( function(t) { vg = t })
     var changeSet = vega
       .changeset()
-      .insert(valueGenerator())
+      .insert(vg)
       .remove(function (t) {
-        return t.x < minimumX;
+        return ((t.date < _minDate) || (t.date>_maxDate))
       });
+      _minDate++;
+      _maxDate++;
     res.view.change('table', changeSet).run();
   }, 1000);
 });
